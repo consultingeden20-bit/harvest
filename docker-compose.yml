@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  harvest-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pc_bastos_harvest_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - JWT_SECRET=pc_bastos_harvest_2026_super_secure_production_secret_key_88392104
+      - DB_PATH=/app/data/harvest.sqlite
+    volumes:
+      - harvest_data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  harvest_data:
+    name: pc_bastos_harvest_db_data

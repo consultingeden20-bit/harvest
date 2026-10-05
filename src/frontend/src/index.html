@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PC Bastos Harvest Management System 2026</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+
+  <!-- App Shell -->
+  <div id="app-shell" style="display: none;">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand-container">
+        <div class="brand-logo">🌿</div>
+        <div>
+          <div class="brand-title" data-i18n="appTitle">PC Bastos Harvest</div>
+          <div class="brand-subtitle" data-i18n="appSubtitle">Management System 2026</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div id="terminal-badge" class="status-pill" style="background:rgba(107,33,168,0.25);border:1px solid #7c3aed;color:#d8b4fe;cursor:pointer;" onclick="app.openTerminalSettingsModal()" title="Click to configure collection terminal settings">
+          💻 <span id="header-terminal-code">DESK-01</span>
+        </div>
+
+        <div id="network-status-pill" class="status-pill online">
+          🟢 <span data-i18n="online">Online</span>
+        </div>
+
+        <div id="last-sync-pill" class="status-pill" style="background:#334155;color:#94a3b8;font-size:0.75rem;" title="Last successful synchronization">
+          ⏱️ <span id="last-sync-time">Auto-Sync Active</span>
+        </div>
+
+        <button id="sync-now-btn" class="sync-btn" onclick="app.triggerManualSync()">
+          🔄 <span data-i18n="syncNow">Sync Now</span>
+        </button>
+
+        <button id="lang-toggle-btn" class="lang-btn" onclick="app.switchLanguage()">
+          🇫🇷 Français
+        </button>
+
+        <div class="user-badge">
+          <span>👤</span>
+          <span id="user-display-name" style="font-weight:700;">Admin</span>
+          <span id="user-role-badge" class="user-role-tag">ADMIN</span>
+        </div>
+
+        <button class="logout-btn" onclick="app.logout()" data-i18n="logout">
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="nav-tabs-bar"></nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- VIEW: DASHBOARD -->
+      <div id="view-dashboard" class="tab-view-panel">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label" data-i18n="kpiTotalHarvest">Total Harvest Income</div>
+            <div class="kpi-value" id="dash-total-income">₣0</div>
+            <div class="kpi-sub" data-i18n="churchVsGroupNote">Direct + Garden + Anonymous</div>
+          </div>
+          <div class="kpi-card purple">
+            <div class="kpi-label" data-i18n="kpiDirectCommitments">Direct Commitments</div>
+            <div class="kpi-value" id="dash-direct-commitments">₣0</div>
+            <div class="kpi-sub"><span id="dash-total-tx">0</span> <span data-i18n="kpiTransactionsCount">Transactions</span></div>
+          </div>
+          <div class="kpi-card blue">
+            <div class="kpi-label" data-i18n="kpiGardenSales">Garden Sales</div>
+            <div class="kpi-value" id="dash-garden-sales">₣0</div>
+            <div class="kpi-sub">Altar & Garden Desk</div>
+          </div>
+          <div class="kpi-card amber">
+            <div class="kpi-label" data-i18n="kpiAnonymous">Anonymous Offerings</div>
+            <div class="kpi-value" id="dash-anonymous-gifts">₣0</div>
+            <div class="kpi-sub">Altar Freewill Gifts</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label" data-i18n="kpiTotalTarget">Total Pledged Target</div>
+            <div class="kpi-value" id="dash-total-target">₣0</div>
+          </div>
+          <div class="kpi-card amber">
+            <div class="kpi-label" data-i18n="kpiOutstanding">Outstanding Balance</div>
+            <div class="kpi-value" id="dash-outstanding">₣0</div>
+          </div>
+          <div class="kpi-card purple">
+            <div class="kpi-label" data-i18n="kpiCompletionRate">Global Completion Rate</div>
+            <div class="kpi-value" id="dash-completion-rate">0%</div>
+          </div>
+        </div>
+
+        <div class="collection-layout" style="margin-top:1.5rem;">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Session Collection Summary</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Session</th>
+                    <th>Date</th>
+                    <th class="text-center">Transactions</th>
+                    <th class="text-right">Total Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-sessions-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Category Performance</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th class="text-center">Count</th>
+                    <th class="text-right">Target</th>
+                    <th class="text-right">Collected</th>
+                    <th class="text-center">%</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-categories-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: COLLECTION DESK -->
+      <div id="view-collection" class="tab-view-panel" style="display: none;">
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1rem;">
+          <button class="btn btn-secondary" onclick="app.downloadCSVTemplate()" data-i18n="btnDownloadCSVTemplate">📥 Download CSV Template</button>
+          <button class="btn btn-purple" onclick="app.openCSVUploadModal()" data-i18n="btnUploadCSVFile">📤 Upload Offline CSV</button>
+        </div>
+
+        <div class="collection-layout">
+          <!-- Left: Search & Contributor Selection -->
+          <div>
+            <div class="card">
+              <div class="search-box-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="contributor-search-input" class="search-input"
+                       data-i18n-placeholder="searchContributorPlaceholder"
+                       placeholder="Search by Contributor ID, Name, or Phone (Ctrl + K)..."
+                       oninput="app.searchContributors(this.value)">
+              </div>
+
+              <div id="collector-search-results" style="max-height: 480px; overflow-y: auto;"></div>
+            </div>
+          </div>
+
+          <!-- Right: Contributor Focus & Fast Payment Entry -->
+          <div>
+            <div class="card">
+              <div id="contributor-focus-details">
+                <div style="padding: 2.5rem; text-align: center; color: #64748b;">
+                  <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚡</div>
+                  <div style="font-weight: 600;" data-i18n="selectContributorPrompt">Select a contributor from the list or search above</div>
+                </div>
+              </div>
+
+              <!-- Payment Form -->
+              <div id="collector-payment-form" style="display: none; border-top: 2px dashed var(--border-color); padding-top: 1.25rem;">
+                <h4 style="margin-bottom: 1rem; color: var(--dark-slate); font-weight: 800;" data-i18n="recordPaymentTitle">Record Harvest Payment</h4>
+
+                <div class="form-group">
+                  <label class="form-label" data-i18n="amountFcfa">Amount (FCFA)</label>
+                  <input type="number" id="collect-amount-input" class="form-control amount-input" placeholder="e.g. 500000" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <div class="form-group">
+                    <label class="form-label" data-i18n="session">Harvest Session</label>
+                    <select id="collect-session-select" class="form-control"></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" data-i18n="paymentMethod">Payment Method</label>
+                    <select id="collect-method-select" class="form-control"></select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" data-i18n="incomeSource">Income Source</label>
+                  <select id="collect-source-select" class="form-control"></select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" data-i18n="notesRemarks">Notes / Remarks (Optional)</label>
+                  <input type="text" id="collect-notes-input" class="form-control" placeholder="Check number, transfer ref, etc.">
+                </div>
+
+                <button class="btn btn-primary btn-lg" onclick="app.handleSavePayment()" data-i18n="btnSavePayment">
+                  SAVE PAYMENT (Enter)
+                </button>
+              </div>
+            </div>
+
+            <!-- Payment History for Selected Contributor -->
+            <div class="card">
+              <div class="card-header">
+                <h4 class="card-title">Payment History</h4>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tx Code</th>
+                      <th>Session</th>
+                      <th>Method</th>
+                      <th>Date</th>
+                      <th class="text-right">Amount</th>
+                      <th class="text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="contributor-payment-history-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: CONTRIBUTORS DIRECTORY -->
+      <div id="view-contributors" class="tab-view-panel" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="tabContributors">Contributors Directory</h3>
+            <button class="btn btn-primary" onclick="app.openCreateContributorModal()">+ Add New Contributor</button>
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+            <input type="text" id="contrib-search-input" class="form-control" style="flex:1;" placeholder="Search by name, ID, phone..." oninput="app.filterContributorsList()">
+            <select id="contrib-filter-group" class="form-control" style="width:250px;" onchange="app.filterContributorsList()"></select>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Groups</th>
+                  <th>Category</th>
+                  <th class="text-right">Target</th>
+                  <th class="text-right">Paid</th>
+                  <th class="text-right">Balance</th>
+                  <th class="text-center">%</th>
+                  <th class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="contributors-table-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: GROUP PORTAL -->
+      <div id="view-group-portal" class="tab-view-panel" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" data-i18n="groupPortalTitle">Group Financial Authority Portal</h3>
+              <p style="font-size:0.85rem;color:#64748b;" data-i18n="groupPortalSubtitle">Scoped financial tracking and member ledger for your authorized group(s).</p>
+            </div>
+          </div>
+          <div id="group-portal-cards"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="myGroupMembers">Group Members & Targets</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Category</th>
+                  <th class="text-right">Target</th>
+                  <th class="text-right">Paid</th>
+                  <th class="text-right">Balance</th>
+                  <th class="text-center">%</th>
+                </tr>
+              </thead>
+              <tbody id="group-members-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: GARDEN SALES -->
+      <div id="view-garden" class="tab-view-panel" style="display: none;">
+        <div class="collection-layout">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title" data-i18n="gardenTitle">Harvest Garden Sales Desk</h3>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="product">Select Product</label>
+              <select id="garden-product-select" class="form-control" onchange="app.onGardenProductChange()"></select>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+              <div class="form-group">
+                <label class="form-label" data-i18n="unitPrice">Selling Price (FCFA)</label>
+                <input type="number" id="garden-unit-price-input" class="form-control amount-input" style="font-size:1.1rem;" placeholder="e.g. 50000" oninput="app.updateGardenTotal()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="quantity">Quantity</label>
+                <input type="number" id="garden-qty-input" class="form-control" value="1" min="1" oninput="app.updateGardenTotal()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Total Amount Calculated</label>
+              <div id="garden-total-amount" class="amount-input" style="font-size:1.3rem;padding:0.6rem;color:var(--primary-green);font-weight:800;">₣0 FCFA</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+              <div class="form-group">
+                <label class="form-label" data-i18n="session">Session</label>
+                <select id="garden-session-select" class="form-control"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="paymentMethod">Payment Method</label>
+                <select id="garden-method-select" class="form-control"></select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" data-i18n="buyerName">Buyer Name (Optional)</label>
+              <input type="text" id="garden-buyer-input" class="form-control" placeholder="Mr./Mrs. Buyer">
+            </div>
+
+            <button class="btn btn-primary btn-lg" onclick="app.handleSaveGardenSale()" data-i18n="btnRecordSale">
+              RECORD GARDEN SALE
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title" data-i18n="gardenSalesHistory">Recent Garden Sales</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Total</th>
+                    <th>Buyer</th>
+                    <th>Session</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="garden-sales-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: ANONYMOUS GIFTS -->
+      <div id="view-anonymous" class="tab-view-panel" style="display: none;">
+        <div class="card" style="max-width:650px;margin:0 auto;">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" data-i18n="anonTitle">Record Anonymous Altar / Freewill Contribution</h3>
+              <p style="font-size:0.85rem;color:#64748b;" data-i18n="anonSubtitle">Anonymous gifts do not require a member identity, but are fully audited and counted towards church totals.</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="amountFcfa">Gift Amount (FCFA)</label>
+            <input type="number" id="anon-amount-input" class="form-control amount-input" placeholder="e.g. 250000" required>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div class="form-group">
+              <label class="form-label" data-i18n="session">Harvest Session</label>
+              <select id="anon-session-select" class="form-control"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="paymentMethod">Payment Method</label>
+              <select id="anon-method-select" class="form-control"></select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="incomeSource">Income Source</label>
+            <select id="anon-source-select" class="form-control"></select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="notesRemarks">Notes / Altar Envelope Remarks</label>
+            <input type="text" id="anon-notes-input" class="form-control" placeholder="e.g. Altar Thanksgiving Offering">
+          </div>
+
+          <button class="btn btn-purple btn-lg" onclick="app.handleSaveAnonymous()" data-i18n="btnSaveAnonymous">
+            RECORD ANONYMOUS GIFT
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW: RECONCILIATION -->
+      <div id="view-reconciliation" class="tab-view-panel" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" data-i18n="reconciliationTitle">Session Cash & Financial Verification</h3>
+              <p style="font-size:0.85rem;color:#64748b;" data-i18n="reconciliationSubtitle">Physical money verification and automated ledger discrepancy checking.</p>
+            </div>
+            <div style="width:250px;">
+              <select id="recon-session-select" class="form-control" onchange="app.onReconciliationSessionChange()"></select>
+            </div>
+          </div>
+
+          <!-- Collector Desk Verification Breakdown (Two-Party Sign-Off) -->
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="margin-bottom:0.75rem;color:var(--dark-slate);font-weight:700;" data-i18n="collectorDeskVerifications">Desk Collector Verifications (Two-Party Sign-Off)</h4>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Collector</th>
+                    <th class="text-center">Tx Count</th>
+                    <th class="text-right">Cash Collected</th>
+                    <th class="text-right">Other Methods</th>
+                    <th class="text-right">Total Amount</th>
+                    <th>Status</th>
+                    <th>Verifier Sign-Off</th>
+                    <th class="text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="recon-collectors-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="collection-layout">
+            <!-- System Register -->
+            <div style="background:#f8fafc;border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:1.25rem;">
+              <h4 style="margin-bottom:0.75rem;color:var(--dark-slate);" data-i18n="systemTotal">System Register Total</h4>
+              <div class="receipt-row"><span>Cash Register:</span><strong id="recon-sys-cash">₣0</strong></div>
+              <div class="receipt-row"><span>Bank Cheques:</span><strong id="recon-sys-cheque">₣0</strong></div>
+              <div class="receipt-row"><span>Mobile Money (MoMo/OM):</span><strong id="recon-sys-momo">₣0</strong></div>
+              <div class="receipt-row"><span>Bank Transfers:</span><strong id="recon-sys-transfer">₣0</strong></div>
+              <div class="receipt-amount-row" style="display:flex;justify-content:space-between;">
+                <span>Total Expected:</span>
+                <span id="recon-sys-total" style="color:var(--primary-green);">₣0</span>
+              </div>
+            </div>
+
+            <!-- Physical Count Inputs -->
+            <div>
+              <h4 style="margin-bottom:0.75rem;color:var(--dark-slate);" data-i18n="physicalTotal">Physical Count Total</h4>
+              <div class="form-group">
+                <label class="form-label" data-i18n="physicalCash">Physical Cash (FCFA)</label>
+                <input type="number" id="recon-phys-cash" class="form-control" value="0" oninput="app.calculateReconciliationDiscrepancy()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="physicalCheque">Physical Cheques (FCFA)</label>
+                <input type="number" id="recon-phys-cheque" class="form-control" value="0" oninput="app.calculateReconciliationDiscrepancy()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="physicalMomo">Mobile Money Verified (FCFA)</label>
+                <input type="number" id="recon-phys-momo" class="form-control" value="0" oninput="app.calculateReconciliationDiscrepancy()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" data-i18n="physicalTransfer">Bank Transfers Verified (FCFA)</label>
+                <input type="number" id="recon-phys-transfer" class="form-control" value="0" oninput="app.calculateReconciliationDiscrepancy()">
+              </div>
+              <div class="receipt-amount-row" style="display:flex;justify-content:space-between;">
+                <span>Total Counted:</span>
+                <span id="recon-phys-total">₣0</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#f1f5f9;border-radius:var(--radius-sm);padding:1rem;margin:1.5rem 0;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:0.85rem;color:#64748b;" data-i18n="discrepancy">Discrepancy (Physical - System):</div>
+              <div id="recon-discrepancy" style="font-size:1.6rem;font-weight:800;">₣0</div>
+            </div>
+            <div id="recon-status-badge" class="status-pill online" style="font-size:1rem;padding:0.5rem 1rem;">
+              RECONCILED
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Verifier Sign-off Notes & Remarks</label>
+            <input type="text" id="recon-notes" class="form-control" placeholder="All envelopes counted and verified by finance team">
+          </div>
+
+          <div style="display: flex; gap: 1rem;">
+            <button class="btn btn-primary btn-lg" style="flex: 1;" onclick="app.submitReconciliation()" data-i18n="btnPerformReconciliation">
+              SUBMIT VERIFICATION & SIGN OFF
+            </button>
+            <button id="btn-admin-final-approve" class="btn btn-purple btn-lg" style="display: none;" onclick="app.handleAdminApproveSession()" data-i18n="btnAdminApproveSession">
+              ADMIN FINAL APPROVAL
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="reconciliationHistory">Reconciliation Audit Records</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Session</th>
+                  <th class="text-right">System Total</th>
+                  <th class="text-right">Physical Count</th>
+                  <th class="text-right">Discrepancy</th>
+                  <th>Status</th>
+                  <th>Verifier</th>
+                  <th>Verified At</th>
+                </tr>
+              </thead>
+              <tbody id="recon-history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: REPORTS -->
+      <div id="view-reports" class="tab-view-panel" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" data-i18n="reportsTitle">Financial Reports & Analytics Suite</h3>
+              <p style="font-size:0.85rem;color:#64748b;" data-i18n="churchVsGroupNote">Note: Church Total counts each transaction exactly once. Group analytical totals reflect the contributions of their respective members.</p>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+              <button class="btn btn-secondary" onclick="app.exportTransactionsCSV()" data-i18n="btnExportTransactionsCSV">Export Transactions (CSV)</button>
+              <button class="btn btn-secondary" onclick="app.exportContributorsCSV()" data-i18n="btnExportContributorsCSV">Export Contributors (CSV)</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-bottom:1rem;">
+            <select id="report-filter-session" class="form-control" onchange="app.filterTransactionsReport()"></select>
+            <select id="report-filter-group" class="form-control" onchange="app.filterTransactionsReport()"></select>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:0.75rem 1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
+            <div>Filtered Total: <strong id="report-tx-total-amount" style="color:var(--primary-green);font-size:1.1rem;">₣0 FCFA</strong></div>
+            <div>Transaction Count: <strong id="report-tx-total-count">0</strong></div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Contributor</th>
+                  <th class="text-right">Amount</th>
+                  <th>Session</th>
+                  <th>Method</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th class="text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="reports-transactions-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: ADMIN & USERS -->
+      <div id="view-admin" class="tab-view-panel" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="userManagementTitle">User & Security Management</h3>
+            <button class="btn btn-primary" onclick="app.openCreateUserModal()" data-i18n="btnCreateUser">+ Create New User</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Role</th>
+                  <th>Assigned Group Scopes</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: CAMPAIGN CONFIGURATION -->
+      <div id="view-admin-config" class="tab-view-panel" style="display: none;">
+        <!-- Season Global Target -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="seasonTarget">Season Global Target Pledge</h3>
+          </div>
+          <div style="display: flex; gap: 1rem; align-items: flex-end; max-width: 600px;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label class="form-label">Total Campaign Target (FCFA)</label>
+              <input type="number" id="config-season-target-input" class="form-control amount-input" placeholder="e.g. 50000000">
+            </div>
+            <button class="btn btn-primary" onclick="app.handleUpdateSeasonTarget()">Save Season Target</button>
+          </div>
+        </div>
+
+        <!-- Groups Management -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="manageGroups">Church Groups Management</h3>
+            <button class="btn btn-primary btn-sm" onclick="app.openGroupModal()">+ Add Group</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name (EN)</th>
+                  <th>Name (FR)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="config-groups-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sessions & Harvest Dates Management -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="manageSessions">Harvest Sessions & Dates</h3>
+            <button class="btn btn-primary btn-sm" onclick="app.openSessionModal()">+ Add Harvest Date</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Session Name</th>
+                  <th>Date</th>
+                  <th>Default Active</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="config-sessions-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Categories & Minimum Amounts -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="manageCategories">Pledge Categories & Minimum Amounts</h3>
+            <button class="btn btn-primary btn-sm" onclick="app.openCategoryModal()">+ Add Category</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name (EN)</th>
+                  <th>Name (FR)</th>
+                  <th class="text-right">Min Target (FCFA)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="config-categories-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Income Sources -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="manageIncomeSources">Income Sources</h3>
+            <button class="btn btn-primary btn-sm" onclick="app.openIncomeSourceModal()">+ Add Income Source</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name (EN)</th>
+                  <th>Name (FR)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="config-income-sources-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Garden Products Catalog -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title" data-i18n="manageGardenProducts">Garden Products Catalog</h3>
+            <button class="btn btn-primary btn-sm" onclick="app.openGardenProductModal()">+ Add Garden Product</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Product Name (EN)</th>
+                  <th>Product Name (FR)</th>
+                  <th class="text-right">Base Price (FCFA)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="config-garden-products-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: AUDIT LOGS -->
+      <div id="view-audit" class="tab-view-panel" style="display: none;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" data-i18n="auditLogsTitle">Immutable System Audit Trail</h3>
+              <p style="font-size:0.85rem;color:#64748b;" data-i18n="auditSubtitle">Comprehensive logging of all transactions, reversals, logins, and administrative modifications.</p>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Actor</th>
+                  <th>Entity</th>
+                  <th>Reason / Justification</th>
+                  <th>Payload Summary</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="audit-logs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW: BACKUP & DISASTER RECOVERY -->
+      <div id="view-backup" class="tab-view-panel" style="display: none;">
+        <div class="card" style="max-width: 800px; margin: 0 auto;">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title" data-i18n="backupTitle">System Backup & Disaster Recovery</h3>
+              <p style="font-size:0.85rem;color:#64748b;" data-i18n="backupSubtitle">Export complete database snapshot or restore backup in case of hardware or power failures.</p>
+            </div>
+          </div>
+          <div style="padding: 1.5rem 0;">
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; margin-bottom: 1.5rem;">
+              <h4 style="margin-bottom: 0.5rem; color: var(--dark-slate);">1-Click Full System Snapshot</h4>
+              <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+                Downloads all transactions, contributor identities, group assignments, garden sales, reconciliations, and audit logs into a single secure portable JSON archive.
+              </p>
+              <button class="btn btn-primary" onclick="app.exportSystemSnapshot()" data-i18n="btnExportSystemBackup">
+                📦 Export Complete System Snapshot (JSON)
+              </button>
+            </div>
+
+            <div style="background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem;">
+              <h4 style="margin-bottom: 0.5rem; color: var(--dark-slate);">Restore Snapshot From Backup File</h4>
+              <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+                Select a previously generated JSON backup file to restore complete system state.
+              </p>
+              <div style="display: flex; gap: 1rem; align-items: center;">
+                <input type="file" id="backup-file-input" accept=".json" class="form-control" style="flex: 1;">
+                <button class="btn btn-purple" onclick="app.restoreSystemSnapshot()" data-i18n="btnRestoreSystemBackup">
+                  📥 Restore Snapshot
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODAL: LOGIN -->
+  <div id="login-modal" class="modal-backdrop" style="display: flex;">
+    <div class="modal-dialog" style="max-width: 420px;">
+      <div class="modal-header" style="background:var(--dark-slate);color:#fff;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="font-size:1.5rem;">🌿</span>
+          <div>
+            <h3 style="font-size:1.1rem;font-weight:800;">PC BASTOS HARVEST</h3>
+            <div style="font-size:0.75rem;color:#94a3b8;">Financial Management 2026</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="event.preventDefault(); app.handleLogin();">
+          <div class="form-group">
+            <label class="form-label" data-i18n="username">Username</label>
+            <input type="text" id="login-username" class="form-control" placeholder="e.g. admin or cmf_fin_sec" required autofocus>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="margin-top:1rem;">
+            SIGN IN TO HARVEST SYSTEM
+          </button>
+        </form>
+        <div style="margin-top:1rem;padding:0.75rem;background:#f8fafc;border-radius:4px;font-size:0.75rem;color:#64748b;">
+          <strong>Default Demo Accounts:</strong><br>
+          • Admin: <code>admin</code> / <code>Admin123!</code><br>
+          • CMF Fin Sec: <code>cmf_fin_sec</code> / <code>Cmf1234!</code><br>
+          • Collector: <code>collector1</code> / <code>Collector123!</code><br>
+          • Verifier: <code>verifier1</code> / <code>Verifier123!</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FORCE PASSWORD CHANGE -->
+  <div id="force-password-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 460px;">
+      <div class="modal-header" style="background:var(--status-warning);color:#fff;">
+        <h3 class="card-title" style="color:#fff;" data-i18n="changePasswordTitle">Set New Secure Password</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:#64748b;margin-bottom:1rem;" data-i18n="changePasswordPrompt">
+          You are using a temporary password. You must set a new permanent password to continue.
+        </p>
+        <div class="form-group">
+          <label class="form-label" data-i18n="currentPassword">Current Temporary Password</label>
+          <input type="password" id="force-current-pass" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="newPassword">New Password (min 6 characters)</label>
+          <input type="password" id="force-new-pass" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="confirmPassword">Confirm New Password</label>
+          <input type="password" id="force-confirm-pass" class="form-control" required>
+        </div>
+        <button class="btn btn-primary btn-lg" onclick="app.handleForcePasswordChange()" data-i18n="btnUpdatePassword">
+          SAVE PERMANENT PASSWORD
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PRINTABLE RECEIPT -->
+  <div id="receipt-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="card-title" data-i18n="receiptTitle">Official Collection Receipt</h3>
+        <button class="btn btn-secondary" onclick="app.closeReceiptModal(false)">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="receipt-box" id="printable-receipt-content">
+          <div class="receipt-header">
+            <div style="font-weight:bold;" data-i18n="receiptPresbyterian">PRESBYTERIAN CHURCH IN CAMEROON</div>
+            <div style="font-weight:bold;" data-i18n="receiptCongregation">PC BASTOS CONGREGATION - YAOUNDE</div>
+            <div style="font-size:0.85rem;" data-i18n="receiptHarvest">ANNUAL HARVEST THANKSGIVING 2026</div>
+          </div>
+
+          <div class="receipt-row">
+            <span data-i18n="receiptNumber">Receipt No:</span>
+            <strong id="receipt-number">-</strong>
+          </div>
+          <div class="receipt-row">
+            <span data-i18n="receiptDate">Date & Time:</span>
+            <span id="receipt-date">-</span>
+          </div>
+          <div class="receipt-row">
+            <span data-i18n="receiptContributor">Contributor:</span>
+            <strong id="receipt-contributor-name">-</strong>
+          </div>
+          <div class="receipt-row">
+            <span data-i18n="contributorId">Contributor ID:</span>
+            <span id="receipt-contributor-code">-</span>
+          </div>
+
+          <div class="receipt-amount-row receipt-row">
+            <span data-i18n="receiptAmountPaid">Amount Paid:</span>
+            <span id="receipt-amount" style="color:var(--primary-green);font-size:1.3rem;">₣0</span>
+          </div>
+
+          <div class="receipt-row">
+            <span data-i18n="receiptPledged">Pledged Target:</span>
+            <span id="receipt-target">₣0</span>
+          </div>
+          <div class="receipt-row">
+            <span data-i18n="receiptTotalPaidToDate">Total Paid to Date:</span>
+            <strong id="receipt-paid-to-date">₣0</strong>
+          </div>
+          <div class="receipt-row">
+            <span data-i18n="receiptRemainingBalance">Remaining Balance:</span>
+            <strong id="receipt-balance" style="color:var(--status-warning);">₣0</strong>
+          </div>
+          <div class="receipt-row" style="margin-top:0.75rem;font-size:0.75rem;border-top:1px dashed #94a3b8;padding-top:0.5rem;">
+            <span data-i18n="receiptOperator">Collector:</span>
+            <span id="receipt-operator">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.print()" data-i18n="btnPrintReceipt">🖨️ Print Receipt Slip</button>
+        <button class="btn btn-primary" onclick="app.closeReceiptModal(true)" data-i18n="btnNextContributor">✓ Next Contributor (Enter)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT PAYMENT RECORD -->
+  <div id="edit-payment-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="card-title" data-i18n="editPaymentTitle">Edit / Correct Payment Record</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('edit-payment-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-payment-id">
+        <div class="form-group">
+          <label class="form-label" data-i18n="originalAmount">Original Amount (FCFA)</label>
+          <input type="text" id="edit-payment-original-amount" class="form-control" readonly style="background:#f1f5f9;font-weight:700;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Corrected Amount (FCFA) *</label>
+          <input type="number" id="edit-payment-new-amount" class="form-control amount-input" placeholder="e.g. 50000" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="editReasonPrompt">Reason / Justification for modification (Mandatory) *</label>
+          <textarea id="edit-payment-reason" class="form-control" rows="3" placeholder="e.g. Typo: entered 5000000 instead of 50000" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('edit-payment-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveEditPayment()">Save Correction</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DUPLICATE CONTRIBUTOR WARNING POPUP -->
+  <div id="duplicate-warning-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 500px;">
+      <div class="modal-header" style="background:var(--status-warning);color:#fff;">
+        <h3 class="card-title" style="color:#fff;" data-i18n="duplicateFoundTitle">⚠️ Possible Duplicate Name Detected</h3>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.9rem;color:var(--dark-slate);margin-bottom:1rem;" data-i18n="duplicateNameWarning">
+          A contributor with this exact name already exists. One person must only have one persistent identity in PC Bastos.
+        </p>
+        <div id="duplicate-existing-details" style="background:#f8fafc;padding:1rem;border-radius:4px;border:1px solid #cbd5e1;margin-bottom:1rem;font-size:0.85rem;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.cancelDuplicateRegistration()" data-i18n="btnCancelRegistration">Cancel & Check Existing</button>
+        <button class="btn btn-purple" onclick="app.confirmDuplicateRegistration()" data-i18n="btnContinueAnyway">Proceed & Create Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CSV BATCH UPLOAD -->
+  <div id="csv-upload-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="card-title" data-i18n="btnUploadCSVFile">Upload Offline CSV Payments</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('csv-upload-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" data-i18n="session">Harvest Session</label>
+          <select id="csv-session-select" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Select CSV File (.csv)</label>
+          <input type="file" id="csv-file-input" accept=".csv" class="form-control" required>
+        </div>
+        <div style="background:#f8fafc;padding:0.75rem;border-radius:4px;font-size:0.75rem;color:#64748b;">
+          <strong>CSV Header Format:</strong><br>
+          <code>contributor_code_or_name, amount, payment_method, income_source, notes</code>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('csv-upload-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleUploadCSV()">Upload & Process CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE CONTRIBUTOR -->
+  <div id="create-contributor-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Register New Contributor</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('create-contributor-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" id="new-contrib-name" class="form-control" required placeholder="e.g. John Fru N.">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" id="new-contrib-phone" class="form-control" placeholder="+237 6...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="new-contrib-email" class="form-control" placeholder="user@example.org">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Group Memberships (Can belong to multiple)</label>
+          <div id="new-contrib-groups-container"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select id="new-contrib-category-select" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Commitment (FCFA)</label>
+            <input type="number" id="new-contrib-target" class="form-control" placeholder="e.g. 500000">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('create-contributor-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleCreateContributor()">Register Contributor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE USER -->
+  <div id="create-user-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Create New System User</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('create-user-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Username *</label>
+          <input type="text" id="new-user-username" class="form-control" required placeholder="e.g. cmf_sec_2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" id="new-user-fullname" class="form-control" required placeholder="e.g. Samuel Ndum">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="new-user-email" class="form-control" placeholder="user@pcbastos.org">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role *</label>
+          <select id="new-user-role-select" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assigned Group Scopes (For Group Financial Authorities)</label>
+          <div id="new-user-groups-container"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="tempPassword">Temporary Password *</label>
+          <input type="text" id="new-user-temppass" class="form-control" value="Harvest2026!" required>
+          <small style="color:#64748b;" data-i18n="forcePasswordChangeNotice">New users will be forced to change this temporary password upon initial login.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('create-user-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleCreateUser()">Create User</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT GROUP -->
+  <div id="config-group-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Manage Church Group</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('config-group-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="group-modal-id">
+        <div class="form-group">
+          <label class="form-label">Group Code *</label>
+          <input type="text" id="group-modal-code" class="form-control" placeholder="e.g. CWF" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">English Name *</label>
+          <input type="text" id="group-modal-name-en" class="form-control" placeholder="Christian Women Fellowship" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">French Name *</label>
+          <input type="text" id="group-modal-name-fr" class="form-control" placeholder="Mouvement des Femmes Chrétiennes" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input type="text" id="group-modal-desc" class="form-control" placeholder="Optional description">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('config-group-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveGroup()">Save Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT SESSION -->
+  <div id="config-session-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Manage Harvest Session / Date</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('config-session-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="session-modal-id">
+        <div class="form-group">
+          <label class="form-label">Session Code *</label>
+          <input type="text" id="session-modal-code" class="form-control" placeholder="e.g. DEDICATION_SUNDAY" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Session Name (English) *</label>
+          <input type="text" id="session-modal-name-en" class="form-control" placeholder="Dedication Sunday" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Session Name (French) *</label>
+          <input type="text" id="session-modal-name-fr" class="form-control" placeholder="Dimanche de Dédicace" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Session Date (YYYY-MM-DD) *</label>
+          <input type="date" id="session-modal-date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;">
+            <input type="checkbox" id="session-modal-default">
+            <strong>Set as Default Active Session for Collection Desks</strong>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('config-session-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveSession()">Save Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT CATEGORY -->
+  <div id="config-category-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Manage Pledge Category</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('config-category-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="category-modal-id">
+        <div class="form-group">
+          <label class="form-label">Category Code *</label>
+          <input type="text" id="category-modal-code" class="form-control" placeholder="e.g. DIAMOND" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category Name (English) *</label>
+          <input type="text" id="category-modal-name-en" class="form-control" placeholder="Diamond Pillar" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category Name (French) *</label>
+          <input type="text" id="category-modal-name-fr" class="form-control" placeholder="Pilier Diamant" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Minimum Target Commitment (FCFA) *</label>
+          <input type="number" id="category-modal-min-target" class="form-control" placeholder="e.g. 1000000" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('config-category-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveCategory()">Save Category</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT INCOME SOURCE -->
+  <div id="config-income-source-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Manage Income Source</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('config-income-source-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="income-source-modal-id">
+        <div class="form-group">
+          <label class="form-label">Source Code *</label>
+          <input type="text" id="income-source-modal-code" class="form-control" placeholder="e.g. YOUTH_PROJECT" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">English Name *</label>
+          <input type="text" id="income-source-modal-name-en" class="form-control" placeholder="Youth Special Project" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">French Name *</label>
+          <input type="text" id="income-source-modal-name-fr" class="form-control" placeholder="Projet Spécial Jeunesse" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('config-income-source-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveIncomeSource()">Save Source</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD/EDIT GARDEN PRODUCT -->
+  <div id="config-garden-product-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Manage Garden Product</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('config-garden-product-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="garden-product-modal-id">
+        <div class="form-group">
+          <label class="form-label">Product Code *</label>
+          <input type="text" id="garden-product-modal-code" class="form-control" placeholder="e.g. ROOSTER" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">English Name *</label>
+          <input type="text" id="garden-product-modal-name-en" class="form-control" placeholder="Live Rooster" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">French Name *</label>
+          <input type="text" id="garden-product-modal-name-fr" class="form-control" placeholder="Coq Vivant" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Base Unit Price (FCFA) *</label>
+          <input type="number" id="garden-product-modal-price" class="form-control" placeholder="e.g. 15000" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('config-garden-product-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveGardenProduct()">Save Product</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TERMINAL CONFIGURATION & CLOUD ENDPOINT -->
+  <div id="terminal-settings-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header" style="background:var(--accent-purple);color:#fff;">
+        <h3 class="card-title" style="color:#fff;">💻 Collection Terminal Settings</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('terminal-settings-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:#64748b;margin-bottom:1rem;">
+          Configure this physical computer's terminal hardware identifier and cloud synchronization endpoint.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Terminal Hardware Code *</label>
+          <input type="text" id="terminal-cfg-code" class="form-control" placeholder="e.g. DESK-01 or LAPTOP-CYF" required>
+          <small style="color:#64748b;">Unique code identifying this collection machine in audit logs.</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Central Host / Cloud Server URL</label>
+          <input type="url" id="terminal-cfg-url" class="form-control" placeholder="e.g. http://localhost:3000 or https://harvest.pcbastos.org">
+          <small style="color:#64748b;">Leave empty or set to current server to use local database.</small>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Automatic Background Sync Interval</label>
+          <select id="terminal-cfg-interval" class="form-control">
+            <option value="15">Every 15 Seconds (Rapid Collection)</option>
+            <option value="30" selected>Every 30 Seconds (Recommended)</option>
+            <option value="60">Every 1 Minute</option>
+            <option value="120">Every 2 Minutes</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('terminal-settings-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleSaveTerminalSettings()">Save & Apply Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/i18n.js"></script>
+  <script src="/storage.js"></script>
+  <script src="/api.js"></script>
+  <script src="/app.js"></script>
+
+  <script>
+    HarvestApp.prototype.handleLogin = async function() {
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      try {
+        const res = await window.api.login(username, password);
+        await this.onLoginSuccess(res.user);
+      } catch (err) {
+        this.showToast(err.message, 'error');
+      }
+    };
+
+    HarvestApp.prototype.switchLanguage = function() {
+      const newLang = window.i18n.toggleLang();
+      this.showToast(`Language set to ${newLang === 'fr' ? 'Français' : 'English'}`, 'info');
+      this.renderNavigationTabs();
+      this.switchTab(this.activeTab);
+    };
+  </script>
+</body>
+</html>

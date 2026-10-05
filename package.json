@@ -1,0 +1,24 @@
+{
+  "name": "pc-bastos-harvest-system",
+  "version": "1.0.0",
+  "description": "PC Bastos Harvest Financial Management & Collection System",
+  "main": "src/desktop/main.js",
+  "author": "PC Bastos Congregation - Yaounde",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node src/backend/server.js",
+    "desktop": "electron src/desktop/main.js",
+    "test": "node tests/all.test.js",
+    "seed": "node src/backend/seed.js",
+    "migrate": "node src/backend/migrations/migrate.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^4.22.3",
+    "jsonwebtoken": "^9.0.2",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^40.0.0"
+  }
+}
