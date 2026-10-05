@@ -4,12 +4,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# SQLite Database & Data files (local data should not be checked into git)
-data/*.sqlite
-data/*.sqlite-wal
-data/*.sqlite-shm
-data/*.sqlite-journal
-data/backups/
 
 # Environment variables
 .env
