@@ -564,6 +564,61 @@
             <select id="report-filter-group" class="form-control" onchange="app.filterTransactionsReport()"></select>
           </div>
 
+          <!-- Church Summary Cards -->
+          <div id="report-church-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;margin-bottom:1.5rem;">
+            <div style="background:#f0fdf4;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Total Church Income</div>
+              <div id="rpt-total-income" style="font-size:1.3rem;font-weight:700;color:#16a34a;">₣0</div>
+            </div>
+            <div style="background:#f0fdf4;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Direct Contributions</div>
+              <div id="rpt-direct-contributions" style="font-size:1.3rem;font-weight:700;color:#16a34a;">₣0</div>
+            </div>
+            <div style="background:#fefce8;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Garden Sales</div>
+              <div id="rpt-garden-sales" style="font-size:1.3rem;font-weight:700;color:#ca8a04;">₣0</div>
+            </div>
+            <div style="background:#eff6ff;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Anonymous Gifts</div>
+              <div id="rpt-anonymous-total" style="font-size:1.3rem;font-weight:700;color:#2563eb;">₣0</div>
+            </div>
+            <div style="background:#faf5ff;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Total Target</div>
+              <div id="rpt-total-target" style="font-size:1.3rem;font-weight:700;color:#7c3aed;">₣0</div>
+            </div>
+            <div style="background:#fef2f2;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Outstanding</div>
+              <div id="rpt-outstanding" style="font-size:1.3rem;font-weight:700;color:#dc2626;">₣0</div>
+            </div>
+            <div style="background:#f0fdf4;padding:1rem;border-radius:8px;text-align:center;">
+              <div style="font-size:0.75rem;color:#64748b;">Completion Rate</div>
+              <div id="rpt-completion-rate" style="font-size:1.3rem;font-weight:700;color:#16a34a;">0%</div>
+            </div>
+          </div>
+
+          <!-- Group Analytics Table -->
+          <div class="card" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+              <h3 class="card-title" style="font-size:1rem;">Group Performance Analytics</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Group</th>
+                    <th>Members</th>
+                    <th>Active</th>
+                    <th class="text-right">Target (FCFA)</th>
+                    <th class="text-right">Collected (FCFA)</th>
+                    <th class="text-right">Balance (FCFA)</th>
+                    <th>Completion</th>
+                  </tr>
+                </thead>
+                <tbody id="rpt-group-analytics-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
           <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:0.75rem 1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
             <div>Filtered Total: <strong id="report-tx-total-amount" style="color:var(--primary-green);font-size:1.1rem;">₣0 FCFA</strong></div>
             <div>Transaction Count: <strong id="report-tx-total-count">0</strong></div>
@@ -751,6 +806,49 @@
             <div>
               <h3 class="card-title" data-i18n="auditLogsTitle">Immutable System Audit Trail</h3>
               <p style="font-size:0.85rem;color:#64748b;" data-i18n="auditSubtitle">Comprehensive logging of all transactions, reversals, logins, and administrative modifications.</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end;">
+            <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px;">
+              <label class="form-label" style="font-size:0.75rem;">Filter by User</label>
+              <select id="audit-filter-user" class="form-control" onchange="app.filterAuditLogs()">
+                <option value="">All Users</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px;">
+              <label class="form-label" style="font-size:0.75rem;">Action Type</label>
+              <select id="audit-filter-action" class="form-control" onchange="app.filterAuditLogs()">
+                <option value="">All Actions</option>
+                <option value="LOGIN_SUCCESS">Login Success</option>
+                <option value="LOGIN_FAILED">Login Failed</option>
+                <option value="PAYMENT_RECORDED">Payment Recorded</option>
+                <option value="PAYMENT_REVERSED">Payment Reversed</option>
+                <option value="PAYMENT_EDITED">Payment Edited</option>
+                <option value="USER_CREATED">User Created</option>
+                <option value="USER_UPDATED">User Updated</option>
+                <option value="USER_DELETED">User Deleted</option>
+                <option value="USER_ACTIVATED">User Activated</option>
+                <option value="USER_DEACTIVATED">User Deactivated</option>
+                <option value="USER_PASSWORD_RESET">Password Reset</option>
+                <option value="CSV_BATCH_PAYMENT_UPLOAD">CSV Upload</option>
+                <option value="RECONCILIATION_RECORDED">Reconciliation</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px;">
+              <label class="form-label" style="font-size:0.75rem;">Entity Type</label>
+              <select id="audit-filter-entity" class="form-control" onchange="app.filterAuditLogs()">
+                <option value="">All Entities</option>
+                <option value="transactions">Transactions</option>
+                <option value="users">Users</option>
+                <option value="contributors">Contributors</option>
+                <option value="reports">Reports</option>
+                <option value="reconciliation">Reconciliation</option>
+                <option value="auth">Auth</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px;">
+              <label class="form-label" style="font-size:0.75rem;">Search</label>
+              <input type="text" id="audit-filter-search" class="form-control" placeholder="Search logs..." oninput="app.filterAuditLogs()">
             </div>
           </div>
           <div class="table-responsive">
@@ -1095,6 +1193,47 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('create-user-modal').style.display = 'none'">Cancel</button>
         <button class="btn btn-primary" onclick="app.handleCreateUser()">Create User</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT USER -->
+  <div id="edit-user-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="card-title">Edit User</h3>
+        <button class="btn btn-secondary" onclick="document.getElementById('edit-user-modal').style.display = 'none'">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-user-id">
+        <div class="form-group">
+          <label class="form-label">Username *</label>
+          <input type="text" id="edit-user-username" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" id="edit-user-fullname" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="edit-user-email" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="text" id="edit-user-phone" class="form-control">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role *</label>
+          <select id="edit-user-role-select" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assigned Group Scopes</label>
+          <div id="edit-user-groups-container" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('edit-user-modal').style.display = 'none'">Cancel</button>
+        <button class="btn btn-primary" onclick="app.handleEditUser()">Save Changes</button>
       </div>
     </div>
   </div>

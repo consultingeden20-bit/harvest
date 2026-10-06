@@ -126,6 +126,102 @@ router.post('/:id/reset-password', async (req, res) => {
   }
 });
 
+// PUT /api/users/:id (Edit user details)
+router.put('/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { username, full_name, email, phone, role_id, group_ids } = req.body;
+
+    const existing = await get(`SELECT * FROM users WHERE id = ?`, [userId]);
+    if (!existing) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check username uniqueness (exclude self)
+    if (username && username !== existing.username) {
+      const dup = await get(`SELECT id FROM users WHERE username = ? AND id != ?`, [username, userId]);
+      if (dup) return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    // Check email uniqueness (exclude self)
+    if (email && email !== existing.email) {
+      const dup = await get(`SELECT id FROM users WHERE email = ? AND id != ?`, [email, userId]);
+      if (dup) return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    await run(
+      `UPDATE users SET username = ?, full_name = ?, email = ?, phone = ?, role_id = ?, updated_at = datetime('now') WHERE id = ?`,
+      [username || existing.username, full_name || existing.full_name, email || null, phone || null, role_id || existing.role_id, userId]
+    );
+
+    // Reassign groups if provided
+    if (Array.isArray(group_ids)) {
+      await run(`DELETE FROM user_group_assignments WHERE user_id = ?`, [userId]);
+      for (const gid of group_ids) {
+        await run(`INSERT INTO user_group_assignments (user_id, group_id) VALUES (?, ?)`, [userId, gid]);
+      }
+    }
+
+    await logAudit({
+      userId: req.user.userId,
+      userName: req.user.fullName,
+      action: 'USER_UPDATED',
+      entityType: 'users',
+      recordId: userId,
+      oldValues: { username: existing.username, full_name: existing.full_name, email: existing.email, role_id: existing.role_id },
+      newValues: { username, full_name, email, role_id, group_ids },
+      reason: 'Administrator updated user details'
+    });
+
+    return res.json({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error('Update user error:', err);
+    return res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// DELETE /api/users/:id (Delete user)
+router.delete('/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (userId === req.user.userId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    const user = await get(`SELECT u.*, r.code as role_code FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ?`, [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deleting last admin
+    if (user.role_code === 'ADMIN') {
+      const adminCount = await get(`SELECT COUNT(*) as cnt FROM users u JOIN roles r ON u.role_id = r.id WHERE r.code = 'ADMIN' AND u.is_active = 1`);
+      if (adminCount.cnt <= 1) {
+        return res.status(400).json({ error: 'Cannot delete the last active administrator' });
+      }
+    }
+
+    await run(`DELETE FROM user_group_assignments WHERE user_id = ?`, [userId]);
+    await run(`DELETE FROM users WHERE id = ?`, [userId]);
+
+    await logAudit({
+      userId: req.user.userId,
+      userName: req.user.fullName,
+      action: 'USER_DELETED',
+      entityType: 'users',
+      recordId: userId,
+      oldValues: { username: user.username, full_name: user.full_name },
+      reason: `Administrator deleted user ${user.username}`
+    });
+
+    return res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    console.error('Delete user error:', err);
+    return res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // PUT /api/users/:id/status (Activate/Deactivate user)
 router.put('/:id/status', async (req, res) => {
   try {

@@ -372,6 +372,26 @@ class ApiClient {
     });
   }
 
+  async updateUser(userId, data) {
+    return await this.request(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteUser(userId) {
+    return await this.request(`/users/${userId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async toggleUserStatus(userId, isActive) {
+    return await this.request(`/users/${userId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ is_active: isActive })
+    });
+  }
+
   async getAuditLogs(params = {}) {
     const query = new URLSearchParams(params).toString();
     return await this.request(`/audit?${query}`);
@@ -392,7 +412,7 @@ class ApiClient {
   async uploadCSVPayments(csvData, sessionId, harvestId = 'hrv-2026') {
     return await this.request('/sync/csv-upload', {
       method: 'POST',
-      body: JSON.stringify({ csv_data: csvData, session_id: sessionId, harvest_id: harvestId })
+      body: JSON.stringify({ csvData: csvData, session_id: sessionId, harvest_id: harvestId })
     });
   }
 

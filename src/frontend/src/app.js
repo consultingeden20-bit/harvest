@@ -613,7 +613,7 @@ class HarvestApp {
       try {
         const text = e.target.result;
         const res = await window.api.uploadCSVPayments(text, sessionId);
-        this.showToast(`CSV Uploaded: ${res.insertedCount} transactions created (${res.errors.length} skipped)`, 'success');
+        this.showToast(`CSV Uploaded: ${res.successCount} transactions created, ${res.duplicateCount} duplicates, ${res.errorCount} errors`, 'success');
         document.getElementById('csv-upload-modal').style.display = 'none';
         if (this.activeTab === 'collection') this.loadCollectionDesk();
       } catch (err) {
@@ -1026,6 +1026,46 @@ class HarvestApp {
     this.populateSessionDropdown('report-filter-session', true);
     this.populateGroupsDropdown('report-filter-group', true);
     this.filterTransactionsReport();
+
+    // Church Summary
+    try {
+      const summaryRes = await window.api.getChurchSummary();
+      const s = summaryRes.summary;
+      document.getElementById('rpt-total-income').textContent = `₣${s.churchTotalIncome.toLocaleString()}`;
+      document.getElementById('rpt-direct-contributions').textContent = `₣${s.directContributions.toLocaleString()}`;
+      document.getElementById('rpt-garden-sales').textContent = `₣${s.gardenSalesTotal.toLocaleString()}`;
+      document.getElementById('rpt-anonymous-total').textContent = `₣${s.anonymousTotal.toLocaleString()}`;
+      document.getElementById('rpt-total-target').textContent = `₣${s.totalTarget.toLocaleString()}`;
+      document.getElementById('rpt-outstanding').textContent = `₣${s.outstandingCommitment.toLocaleString()}`;
+      document.getElementById('rpt-completion-rate').textContent = `${s.globalCompletionRate}%`;
+    } catch (err) {
+      console.error('Failed to load church summary:', err);
+    }
+
+    // Group Analytics
+    try {
+      const groupRes = await window.api.getGroupAnalytics();
+      const tbody = document.getElementById('rpt-group-analytics-tbody');
+      tbody.innerHTML = groupRes.groupAnalytics.map(g => `
+        <tr>
+          <td><span class="group-pill">${g.groupCode}</span> ${window.i18n.getLang() === 'fr' ? g.nameFr : g.nameEn}</td>
+          <td>${g.memberCount}</td>
+          <td>${g.activeContributors}</td>
+          <td class="text-right">₣${g.targetAmount.toLocaleString()}</td>
+          <td class="text-right" style="color:#16a34a;font-weight:600;">₣${g.collectedAmount.toLocaleString()}</td>
+          <td class="text-right" style="color:#dc2626;">₣${g.balanceAmount.toLocaleString()}</td>
+          <td>
+            <div style="background:#e2e8f0;border-radius:4px;height:18px;overflow:hidden;min-width:80px;">
+              <div style="background:${g.completionRate >= 75 ? '#16a34a' : g.completionRate >= 50 ? '#ca8a04' : '#dc2626'};height:100%;width:${Math.min(g.completionRate, 100)}%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#fff;font-weight:600;">
+                ${g.completionRate}%
+              </div>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error('Failed to load group analytics:', err);
+    }
   }
 
   async filterTransactionsReport() {
@@ -1196,6 +1236,7 @@ class HarvestApp {
   async loadAdminView() {
     try {
       const res = await window.api.listUsers();
+      this._usersCache = res.users;
       const tbody = document.getElementById('admin-users-tbody');
       tbody.innerHTML = res.users.map(u => `
         <tr>
@@ -1204,8 +1245,11 @@ class HarvestApp {
           <td><span class="user-role-tag">${u.role_code}</span></td>
           <td>${(u.assignedGroups || []).map(g => `<span class="group-pill">${g.code}</span>`).join(' ')}</td>
           <td><span class="status-pill ${u.is_active ? 'online' : 'offline'}">${u.is_active ? 'Active' : 'Disabled'}</span></td>
-          <td>
-            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="app.promptResetPassword('${u.id}', '${u.username}')">Reset Pass</button>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="app.openEditUserModal('${u.id}')">✏️ Edit</button>
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="app.handleToggleUserStatus('${u.id}', ${u.is_active})">${u.is_active ? '🔒 Disable' : '✅ Enable'}</button>
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;" onclick="app.promptResetPassword('${u.id}', '${u.username}')">🔑 Reset</button>
+            <button class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.75rem;color:#dc2626;" onclick="app.handleDeleteUser('${u.id}', '${u.username}')">🗑️</button>
           </td>
         </tr>
       `).join('');
@@ -1253,6 +1297,81 @@ class HarvestApp {
     try {
       await window.api.resetUserPassword(userId, tempPass);
       this.showToast(`Temporary password reset for ${username}. User will be forced to change password on next login.`, 'success');
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  openEditUserModal(userId) {
+    const user = (this._usersCache || []).find(u => u.id === userId);
+    if (!user) return this.showToast('User not found', 'error');
+
+    this.populateRolesDropdown('edit-user-role-select');
+    this.populateGroupsCheckboxes('edit-user-groups-container');
+
+    document.getElementById('edit-user-id').value = user.id;
+    document.getElementById('edit-user-username').value = user.username;
+    document.getElementById('edit-user-fullname').value = user.full_name;
+    document.getElementById('edit-user-email').value = user.email || '';
+    document.getElementById('edit-user-phone').value = user.phone || '';
+
+    setTimeout(() => {
+      document.getElementById('edit-user-role-select').value = user.role_id;
+      const groupIds = (user.assignedGroups || []).map(g => g.id);
+      document.querySelectorAll('.edit-user-group-cb').forEach(cb => {
+        cb.checked = groupIds.includes(cb.value);
+      });
+    }, 50);
+
+    document.getElementById('edit-user-modal').style.display = 'flex';
+  }
+
+  async handleEditUser() {
+    const userId = document.getElementById('edit-user-id').value;
+    const username = document.getElementById('edit-user-username').value;
+    const fullName = document.getElementById('edit-user-fullname').value;
+    const email = document.getElementById('edit-user-email').value;
+    const phone = document.getElementById('edit-user-phone').value;
+    const roleId = document.getElementById('edit-user-role-select').value;
+    const checkedGroups = Array.from(document.querySelectorAll('.edit-user-group-cb:checked')).map(cb => cb.value);
+
+    try {
+      await window.api.updateUser(userId, {
+        username,
+        full_name: fullName,
+        email,
+        phone,
+        role_id: roleId,
+        group_ids: checkedGroups
+      });
+      this.showToast('User updated successfully!', 'success');
+      document.getElementById('edit-user-modal').style.display = 'none';
+      this.loadAdminView();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  async handleToggleUserStatus(userId, currentlyActive) {
+    const action = currentlyActive ? 'disable' : 'enable';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+    try {
+      await window.api.toggleUserStatus(userId, !currentlyActive);
+      this.showToast(`User ${action}d successfully`, 'success');
+      this.loadAdminView();
+    } catch (err) {
+      this.showToast(err.message, 'error');
+    }
+  }
+
+  async handleDeleteUser(userId, username) {
+    if (!confirm(`⚠️ Permanently delete user "${username}"? This cannot be undone.`)) return;
+
+    try {
+      await window.api.deleteUser(userId);
+      this.showToast(`User "${username}" deleted`, 'success');
+      this.loadAdminView();
     } catch (err) {
       this.showToast(err.message, 'error');
     }
@@ -1639,8 +1758,33 @@ class HarvestApp {
 
   // --- AUDIT LOGS ---
   async loadAuditView() {
+    // Populate user filter dropdown
     try {
-      const res = await window.api.getAuditLogs({ limit: 100 });
+      const usersRes = await window.api.listUsers();
+      const userSelect = document.getElementById('audit-filter-user');
+      if (userSelect) {
+        userSelect.innerHTML = '<option value="">All Users</option>' +
+          usersRes.users.map(u => `<option value="${u.id}">${u.full_name} (${u.username})</option>`).join('');
+      }
+    } catch (e) { /* non-admin won't have user list */ }
+
+    this.filterAuditLogs();
+  }
+
+  async filterAuditLogs() {
+    const params = { limit: 100 };
+    const userId = document.getElementById('audit-filter-user')?.value;
+    const action = document.getElementById('audit-filter-action')?.value;
+    const entityType = document.getElementById('audit-filter-entity')?.value;
+    const search = document.getElementById('audit-filter-search')?.value;
+
+    if (userId) params.user_id = userId;
+    if (action) params.action = action;
+    if (entityType) params.entity_type = entityType;
+    if (search) params.search = search;
+
+    try {
+      const res = await window.api.getAuditLogs(params);
       const tbody = document.getElementById('audit-logs-tbody');
       tbody.innerHTML = res.logs.map(l => `
         <tr>
@@ -1799,7 +1943,7 @@ class HarvestApp {
     const container = document.getElementById(containerId);
     if (!container || !this.config || !this.config.groups) return;
 
-    const cbClass = containerId.includes('user') ? 'new-user-group-cb' : 'new-contrib-group-cb';
+    const cbClass = containerId.includes('edit-user') ? 'edit-user-group-cb' : containerId.includes('user') ? 'new-user-group-cb' : 'new-contrib-group-cb';
     container.innerHTML = this.config.groups.map(g => `
       <label style="display:inline-flex;align-items:center;gap:0.4rem;margin-right:1rem;margin-bottom:0.5rem;font-size:0.85rem;cursor:pointer;">
         <input type="checkbox" class="${cbClass}" value="${g.id}">
