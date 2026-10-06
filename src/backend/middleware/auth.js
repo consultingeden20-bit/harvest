@@ -1,6 +1,6 @@
 const { verifyToken } = require('../services/auth');
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -11,6 +11,22 @@ function authenticateToken(req, res, next) {
   const decoded = verifyToken(token);
   if (!decoded) {
     return res.status(401).json({ error: 'Invalid or expired session token. Please log in again.' });
+  }
+
+  // Check if user is active before proceeding
+  const { get } = require('../db');
+  try {
+    const user = await get('SELECT id, username, is_active FROM users WHERE id = ?', [decoded.userId]);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    if (!user.is_active) {
+      return res.status(403).json({ error: 'Account is deactivated. Please contact your system administrator.' });
+    }
+  } catch (err) {
+    console.error('Error checking user active status:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 
   req.user = decoded;

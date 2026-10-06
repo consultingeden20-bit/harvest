@@ -32,7 +32,7 @@ async function authenticateUser(username, password, terminalId = null, ipAddress
     `SELECT u.*, r.code as role_code, r.name_en as role_name_en, r.name_fr as role_name_fr
      FROM users u
      JOIN roles r ON u.role_id = r.id
-     WHERE u.username = ? AND u.is_active = 1`,
+     WHERE u.username = ?`,
     [username]
   );
 
@@ -60,6 +60,20 @@ async function authenticateUser(username, password, terminalId = null, ipAddress
       ipAddress
     });
     return { error: 'Invalid username or password' };
+  }
+
+  // Check if user is active
+  if (!user.is_active) {
+    await logAudit({
+      userId: user.id,
+      userName: user.full_name,
+      terminalId,
+      action: 'LOGIN_FAILED_ACCOUNT_INACTIVE',
+      entityType: 'auth',
+      reason: `Login attempt for inactive user '${user.username}'`,
+      ipAddress
+    });
+    return { error: 'Account is deactivated. Please contact your system administrator.' };
   }
 
   // Fetch assigned group scopes
