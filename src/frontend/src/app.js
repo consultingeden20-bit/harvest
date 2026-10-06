@@ -29,6 +29,11 @@ class HarvestApp {
         const searchInput = document.getElementById('contributor-search-input');
         if (searchInput) searchInput.focus();
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        document.getElementById('login-modal').style.display = 'flex';
+        document.getElementById('app-shell').style.display = 'none';
+      }
     });
 
     // 4. Update Header Terminal Identifier
