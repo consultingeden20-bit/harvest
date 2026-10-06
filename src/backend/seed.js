@@ -526,6 +526,20 @@ async function seed(customDb = null) {
   console.log('Seed process completed successfully!');
 }
 
+async function ensureSeeded(customDb = null) {
+  await runMigrations(customDb);
+  try {
+    const userRow = await get(`SELECT count(*) as count FROM users`, [], customDb);
+    if (!userRow || userRow.count === 0) {
+      console.log('Fresh database detected. Auto-provisioning initial master data and demo accounts...');
+      await seed(customDb);
+    }
+  } catch (err) {
+    console.warn('ensureSeeded check failed, running seed:', err);
+    await seed(customDb);
+  }
+}
+
 if (require.main === module) {
   seed()
     .then(() => process.exit(0))
@@ -535,4 +549,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { seed };
+module.exports = { seed, ensureSeeded };

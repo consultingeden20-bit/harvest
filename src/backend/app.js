@@ -18,6 +18,9 @@ const backupRoutes = require('./routes/backup.routes');
 
 const app = express();
 
+// Trust reverse proxy headers (Render, Cloudflare, Nginx, AWS ALB)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
