@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: pc-bastos-harvest
+    name: harvest-rqic
     runtime: node
     plan: free
     region: frankfurt
+    rootDir: .
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
