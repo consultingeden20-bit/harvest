@@ -71,14 +71,17 @@ class ApiClient {
 
     try {
       const res = await fetch(url, config);
+      const data = await res.json().catch(() => ({}));
 
       if (res.status === 401) {
+        if (endpoint === '/auth/login') {
+          throw new Error(data.error || 'Invalid username or password');
+        }
         this.setToken(null);
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         throw new Error('Session expired. Please log in.');
       }
 
-      const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Server request failed');
       }

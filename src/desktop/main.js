@@ -55,11 +55,11 @@ function startEmbeddedServer() {
     process.env.DB_PATH = appDataDbPath;
 
     const { getDb } = require('../backend/db');
-    const { runMigrations } = require('../backend/migrations/migrate');
+    const { ensureSeeded } = require('../backend/seed');
     const appBackend = require('../backend/app');
 
-    // Run schema migrations on desktop SQLite database
-    runMigrations()
+    // Run schema migrations and ensure initial accounts on desktop SQLite database
+    ensureSeeded()
       .then(() => {
         const server = http.createServer(appBackend);
         server.listen(LOCAL_PORT, '127.0.0.1', () => {
@@ -67,7 +67,7 @@ function startEmbeddedServer() {
         });
       })
       .catch((err) => {
-        console.error('Desktop DB migration error:', err);
+        console.error('Desktop DB migration / seed error:', err);
       });
   } catch (err) {
     console.error('Failed to start embedded desktop backend server:', err);
