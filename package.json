@@ -12,9 +12,41 @@
     "start": "node src/backend/server.js",
     "build": "node src/backend/migrations/migrate.js",
     "desktop": "electron src/desktop/main.js",
+    "dist": "electron-builder --win -c.npmRebuild=false",
+    "dist:portable": "electron-builder --win portable -c.npmRebuild=false",
+    "dist:dir": "electron-builder --win --dir -c.npmRebuild=false",
     "test": "node tests/all.test.js",
     "seed": "node src/backend/seed.js",
     "migrate": "node src/backend/migrations/migrate.js"
+  },
+  "build": {
+    "appId": "org.pcbastos.harvest2026",
+    "productName": "PC Bastos Harvest 2026",
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "data/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "src/desktop/main.js"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "PC Bastos Harvest 2026",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -23,6 +55,7 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "electron": "^40.0.0"
+    "electron": "^40.10.6",
+    "electron-builder": "^26.7.1"
   }
 }
