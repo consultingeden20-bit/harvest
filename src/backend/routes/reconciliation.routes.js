@@ -189,8 +189,8 @@ router.post('/:id/admin-approve', requireRoles('ADMIN'), async (req, res) => {
   }
 });
 
-// GET /api/reconciliation/history
-router.get('/history', requireRoles('ADMIN', 'VERIFIER'), async (req, res) => {
+// GET /api/reconciliation & GET /api/reconciliation/history
+const handleListReconciliations = async (req, res) => {
   try {
     const { harvest_id } = req.query;
     const history = await listReconciliations(harvest_id || 'hrv-2026');
@@ -199,6 +199,9 @@ router.get('/history', requireRoles('ADMIN', 'VERIFIER'), async (req, res) => {
     console.error('List reconciliations error:', err);
     return res.status(500).json({ error: 'Failed to fetch reconciliation history' });
   }
-});
+};
+
+router.get('/', requireRoles('ADMIN', 'VERIFIER'), handleListReconciliations);
+router.get('/history', requireRoles('ADMIN', 'VERIFIER'), handleListReconciliations);
 
 module.exports = router;

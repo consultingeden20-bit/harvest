@@ -74,12 +74,16 @@ class ApiClient {
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 401) {
-        if (endpoint === '/auth/login') {
+        if (endpoint.includes('/login') || endpoint.includes('auth/login')) {
           throw new Error(data.error || 'Invalid username or password');
         }
         this.setToken(null);
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
         throw new Error('Session expired. Please log in.');
+      }
+
+      if (res.status === 403) {
+        throw new Error(data.error || 'Access restricted for this user role');
       }
 
       if (!res.ok) {

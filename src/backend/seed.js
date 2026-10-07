@@ -533,9 +533,70 @@ async function ensureSeeded(customDb = null) {
     if (!userRow || userRow.count === 0) {
       console.log('Fresh database detected. Auto-provisioning initial master data and demo accounts...');
       await seed(customDb);
+      return;
+    }
+
+    // Idempotently ensure all default roles exist
+    const roles = [
+      { id: 'role-admin', code: 'ADMIN', name_en: 'Administrator', name_fr: 'Administrateur', description: 'Full system control and church-wide access' },
+      { id: 'role-group-fin', code: 'GROUP_FIN_SEC', name_en: 'Group Financial Authority', name_fr: 'Secrétaire Financier de Groupe', description: 'Restricted financial access scoped to assigned group(s)' },
+      { id: 'role-collector', code: 'COLLECTOR', name_en: 'Collector', name_fr: 'Collecteur', description: 'Desk collection terminal operator' },
+      { id: 'role-verifier', code: 'VERIFIER', name_en: 'Finance / Verifier', name_fr: 'Vérificateur Financier', description: 'Physical cash and session reconciliation (no access to donor private names)' },
+      { id: 'role-viewer', code: 'VIEWER', name_en: 'Leadership / Viewer', name_fr: 'Dirigeant / Lecteur', description: 'Read-only access to authorized reporting' }
+    ];
+    for (const r of roles) {
+      const exists = await get(`SELECT id FROM roles WHERE code = ? OR id = ?`, [r.code, r.id], customDb);
+      if (!exists) {
+        await run(`INSERT INTO roles (id, code, name_en, name_fr, description) VALUES (?, ?, ?, ?, ?)`, [r.id, r.code, r.name_en, r.name_fr, r.description], customDb);
+      }
+    }
+
+    // Idempotently ensure all groups exist
+    const groups = [
+      { id: 'grp-cmf', code: 'CMF', name_en: 'Christian Men Fellowship (CMF)', name_fr: 'Mouvement des Hommes Chrétiens (CMF)', display_order: 1 },
+      { id: 'grp-cwf', code: 'CWF', name_en: 'Christian Women Fellowship (CWF)', name_fr: 'Mouvement des Femmes Chrétiennes (CWF)', display_order: 2 },
+      { id: 'grp-cyf', code: 'CYF', name_en: 'Christian Youth Fellowship (CYF)', name_fr: 'Jeunesse Chrétienne (CYF)', display_order: 3 },
+      { id: 'grp-cci', code: 'CCI', name_en: 'Christian Children Infilling (CCI)', name_fr: 'Enfants Chrétiens (CCI)', display_order: 4 },
+      { id: 'grp-session', code: 'SESSION', name_en: 'Kirk Session / Elders', name_fr: 'Conseil des Anciens', display_order: 5 },
+      { id: 'grp-choir', code: 'CHOIR', name_en: 'Church Choirs', name_fr: 'Chœurs et Chorales', display_order: 6 }
+    ];
+    for (const g of groups) {
+      const exists = await get(`SELECT id FROM groups WHERE code = ? OR id = ?`, [g.code, g.id], customDb);
+      if (!exists) {
+        await run(`INSERT INTO groups (id, code, name_en, name_fr, display_order) VALUES (?, ?, ?, ?, ?)`, [g.id, g.code, g.name_en, g.name_fr, g.display_order], customDb);
+      }
+    }
+
+    // Idempotently ensure all demo role users exist
+    const defaultUsers = [
+      { id: 'usr-admin', username: 'admin', full_name: 'PC Bastos Administrator', email: 'admin@pcbastos.org', role_id: 'role-admin', pass: 'Admin123!', force: 0 },
+      { id: 'usr-cmf-sec', username: 'cmf_fin_sec', full_name: 'CMF Financial Secretary', email: 'cmf.finance@pcbastos.org', role_id: 'role-group-fin', pass: 'Cmf1234!', force: 0, groups: ['grp-cmf'] },
+      { id: 'usr-cyf-sec', username: 'cyf_fin_sec', full_name: 'CYF Financial Secretary', email: 'cyf.finance@pcbastos.org', role_id: 'role-group-fin', pass: 'Cyf1234!', force: 0, groups: ['grp-cyf'] },
+      { id: 'usr-cci-sec', username: 'cci_fin_sec', full_name: 'CCI Financial Secretary', email: 'cci.finance@pcbastos.org', role_id: 'role-group-fin', pass: 'Cci1234!', force: 0, groups: ['grp-cci'] },
+      { id: 'usr-collector-1', username: 'collector1', full_name: 'Desk Collector 1 (Central)', email: 'collector1@pcbastos.org', role_id: 'role-collector', pass: 'Collector123!', force: 0 },
+      { id: 'usr-collector-cmf', username: 'collector_cmf', full_name: 'CMF Desk Collector', email: 'collector_cmf@pcbastos.org', role_id: 'role-collector', pass: 'Collector123!', force: 0, groups: ['grp-cmf'] },
+      { id: 'usr-verifier-1', username: 'verifier1', full_name: 'Session Cash Verifier', email: 'verifier1@pcbastos.org', role_id: 'role-verifier', pass: 'Verifier123!', force: 0 },
+      { id: 'usr-temp-user', username: 'temp_user', full_name: 'New Assigned Operator', email: 'temp@pcbastos.org', role_id: 'role-collector', pass: 'Temp1234!', force: 1 }
+    ];
+
+    for (const u of defaultUsers) {
+      const existingUser = await get(`SELECT id FROM users WHERE username = ?`, [u.username], customDb);
+      if (!existingUser) {
+        const hash = await bcrypt.hash(u.pass, SALT_ROUNDS);
+        await run(
+          `INSERT INTO users (id, username, full_name, email, role_id, password_hash, force_password_change, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+          [u.id, u.username, u.full_name, u.email, u.role_id, hash, u.force],
+          customDb
+        );
+        if (u.groups) {
+          for (const grpId of u.groups) {
+            await run(`INSERT OR IGNORE INTO user_group_assignments (user_id, group_id) VALUES (?, ?)`, [u.id, grpId], customDb);
+          }
+        }
+      }
     }
   } catch (err) {
-    console.warn('ensureSeeded check failed, running seed:', err);
+    console.warn('ensureSeeded check failed, running full seed:', err);
     await seed(customDb);
   }
 }
